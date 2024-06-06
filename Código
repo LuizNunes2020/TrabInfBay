@@ -1,0 +1,48 @@
+library(ggplot2)
+library(tidyverse)
+library(lrgs)
+library(GGally) #ggPairs
+library(car) #VIF
+library(bestglm)#Best Model
+
+
+db <- read_csv(choose.files())
+#Verificando váriaveis
+boxplot(db$Weight)
+
+#retirando observacao 0
+db <- db %>% filter(Weight != 0)
+
+boxplot(db$Length1)
+boxplot(db$Length2)
+boxplot(db$Length3)
+boxplot(db$Height)
+boxplot(db$Width)
+
+#verificando correlação entre preditoras
+ggpairs(db)
+
+#retirando variáveis muito correlacionadas
+db <- db %>% select(-Length2,-Length3)
+
+ggpairs(db)
+
+#modelo frequentista
+model <- lm(Weight ~ Length1 + Height + Width + Species,db)
+summary(model)
+
+#verificando multicolinearidade
+car::vif(model)
+
+#modelo quase saturado
+model <- lm(log(Weight) ~ Length1 + Height+ Width + Species + Length1*Species + Height*Species + Width*Species + Length1*Height*Width,db)
+summary(model)
+plot(model)
+
+#extrair melhor modelo
+
+
+
+
+
+
