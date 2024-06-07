@@ -7,6 +7,8 @@ library(bestglm)#Best Model
 
 
 db <- read_csv(choose.files())
+db <- db %>% mutate(Species = as.factor(Species))
+
 #Verificando váriaveis
 boxplot(db$Weight)
 
@@ -28,20 +30,29 @@ db <- db %>% select(-Length2,-Length3)
 ggpairs(db)
 
 #modelo frequentista
-model <- lm(Weight ~ Length1 + Height + Width + Species,db)
+model <- lm(log(Weight) ~ Length1 + Height + Width + Species,db)
 summary(model)
 
 #verificando multicolinearidade
-car::vif(model)
+car::vif(model) #percebemos que length, Height e Width são provavelmente multicolineares, adicionamos interação para controlar.
 
 #modelo quase saturado
 model <- lm(log(Weight) ~ Length1 + Height+ Width + Species + Length1*Species + Height*Species + Width*Species + Length1*Height*Width,db)
 summary(model)
 plot(model)
 
-#extrair melhor modelo
+#extrair um ótimo modelo
+forward <- regsubsets(log(Weight) ~ Length1 + Height+ Width + Species + Length1*Species + Height*Species + Width*Species + Length1*Height*Width, db, nvmax = 150, method = "forward")
+modelos <- summary(forward)
+modelos$which
+which.max(modelos$adjr2)
 
+#usando modelo encontrado por stepwise
+model <- lm(log(Weight) ~ Length1 + Height+ Width + Species + Length1*Height*Width,db) #optando pelo mais simples
+summary(model)
+plot(model)
 
+#Agora o desafio é fazer parecido de forma bayesiana rapazeada, bora 
 
 
 
