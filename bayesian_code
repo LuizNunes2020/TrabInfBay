@@ -1,0 +1,41 @@
+library(tidyverse)
+library(lrgs)
+library(fastDummies)
+library(ggplot2)
+library(GGally)
+
+db <- read_csv(choose.files())
+db <- db %>% mutate(Species = as.factor(Species))
+
+db <- dummy_cols(db, remove_first_dummy = TRUE,remove_selected_columns = TRUE)
+
+#Verificando váriaveis
+boxplot(db$Weight)
+
+#retirando observacao 0
+db <- db %>% filter(Weight != 0)
+
+boxplot(db$Length1)
+boxplot(db$Length2)
+boxplot(db$Length3)
+boxplot(db$Height)
+boxplot(db$Width)
+
+#verificando correlação entre preditoras
+ggpairs(db[,1:6])
+
+#decidimos manter apenas um length
+
+db <- db %>% select(-Length2,-Length3)
+
+ggpairs(db[,1:4])
+
+#dada as claras correlções entre entre as preditoras, adicionamos interação para controlar.
+
+db <- db %>% mutate("Length1:Height" = Length1*Height, "Length1:Width" = Length1*Width, "Height:Width" = Height*Width, "Length1:Height:Width" = Length1*Height*Width)
+
+#tranformando Y para ln(Y)
+
+db <- db %>% mutate(Weight = log(Weight))
+
+fit.post.chain1 <- Gibbs.regression(as.matrix(db[,2:16]), db$Weight, NULL, 10000, trace='bsmt', fix='xy') ##GIBBS
