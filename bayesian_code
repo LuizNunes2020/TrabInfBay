@@ -87,8 +87,14 @@ for (i in 1:14){
 }
 
 X <- mutate(db, intercepto = 1) %>% select(intercepto, 2:14)
+fitted_values <- as.matrix(X) %*% matrix(post_means_B, nrow = 14)
 
-residuals <- as.matrix(db[,1]) - as.matrix(X) %*% matrix(post_means_B, nrow = 14)
+residuals <- as.matrix(db[,1]) - fitted_values
+colnames(residuals) <- "residuo"
+
+data.frame(fitted =fitted_values, residuals) %>% ggplot(aes(x = fitted, y = residuo))+
+  geom_point()+
+  geom_smooth(method = "lm")
 
 ggplot(residuals,aes(x = residuals[,1]))+
   geom_histogram()
@@ -96,6 +102,8 @@ ggplot(residuals,aes(x = residuals[,1]))+
 ggplot(residuals,aes(sample = residuals[,1]))+
   geom_qq()+
   geom_qq_line()
+#os gráficos aparentam normalidade, e detectamos a presença de alguns outliers
+
 
 
 # distribuição preditiva de alguns betas (pode ser uma validação cruzada se quisermos)
