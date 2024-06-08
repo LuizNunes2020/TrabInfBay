@@ -38,4 +38,66 @@ db <- db %>% mutate("Length1:Height" = Length1*Height, "Length1:Width" = Length1
 
 db <- db %>% mutate(Weight = log(Weight))
 
-fit.post.chain1 <- Gibbs.regression(as.matrix(db[,2:16]), db$Weight, NULL, 10000, trace='bsmt', fix='xy') ##GIBBS
+bayesian_model <- Gibbs.regression(as.matrix(db[,2:14]), db$Weight, NULL, 10000, trace='bsmt', fix='xy') ##GIBBS
+
+post_chains_1 <- Gibbs.post2dataframe(bayesian_model)[,1:15]
+
+#distribuicões dos B e Sigma a posteriori
+#B1
+
+for (i in 1:14){
+  g <- ggplot(post_chains_1, aes(x = post_chains_1[,i]))+
+    geom_density(fill = 4, color = 4)+
+    geom_vline(aes(xintercept = mean(post_chains_1[,i]), color = "Média"), show.legend = TRUE)+
+    labs(title = paste("Distribuição a posteriori de B",i),x = paste("B",i), y = "densidade")+
+    scale_colour_discrete(name = "Legenda")
+    
+  print(g)
+}
+
+ggplot(post_chains_1,aes(x = Sigma11))+
+  geom_histogram(fill = 4, color = 4)+
+  geom_vline(aes(xintercept = mean(Sigma11), color = "Média"),show.legend = TRUE)+
+  labs(title = "Distribuição a posteriori de Sigma",x = "Sigma11", y = "densidade")+
+  scale_colour_discrete(name = "Legenda")
+
+
+#Intervalos de credibilidade de 95%
+
+cred_intervals <- data.frame(colnames(post_chains_1), rep(0,15), rep(0,15))
+colnames(cred_intervals) <- c("Parâmetro","2.5%","97.5%")
+
+for (i in 1:15){
+  low <- as.numeric(quantile(post_chains_1[,i],0.025))
+  high <- as.numeric(quantile(post_chains_1[,i],0.975))
+  cred_intervals[i,2] <- low
+  cred_intervals[i,3] <- high
+}
+# Temos como não significativo algumas dummies de espécie, porém optamos por manter a categórica
+
+#cálculo da distribuição de r^2 a posteriori
+# ...
+# ...
+
+# análise de resíduos pelos betas médios
+
+post_means_B <- rep(0,14)
+for (i in 1:14){
+  post_means_B[i] <- mean(post_chains_1[,i])
+}
+
+X <- mutate(db, intercepto = 1) %>% select(intercepto, 2:14)
+
+residuals <- as.matrix(db[,1]) - as.matrix(X) %*% matrix(post_means_B, nrow = 14)
+
+ggplot(residuals,aes(x = residuals[,1]))+
+  geom_histogram()
+
+ggplot(residuals,aes(sample = residuals[,1]))+
+  geom_qq()+
+  geom_qq_line()
+
+
+# distribuição preditiva de alguns betas (pode ser uma validação cruzada se quisermos)
+# ...
+# ..
