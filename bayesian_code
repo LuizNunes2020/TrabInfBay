@@ -42,8 +42,16 @@ bayesian_model <- Gibbs.regression(as.matrix(db[,2:14]), db$Weight, NULL, 10000,
 
 post_chains_1 <- Gibbs.post2dataframe(bayesian_model)[,1:15]
 
+colnames(post_chains_1) <- c(paste("B0",1:9, sep = ""),paste("B",10:14, sep=""),"Sigma")
+#Verificação gráfica da convergência e calculo das estisticas R
+#...
+#...
+
+#Burn-in
+#...
+#...
+
 #distribuicões dos B e Sigma a posteriori
-#B1
 
 for (i in 1:14){
   g <- ggplot(post_chains_1, aes(x = post_chains_1[,i]))+
@@ -53,12 +61,13 @@ for (i in 1:14){
     scale_colour_discrete(name = "Legenda")
     
   print(g)
+  #importar para onde precisar
 }
 
-ggplot(post_chains_1,aes(x = Sigma11))+
-  geom_histogram(fill = 4, color = 4)+
-  geom_vline(aes(xintercept = mean(Sigma11), color = "Média"),show.legend = TRUE)+
-  labs(title = "Distribuição a posteriori de Sigma",x = "Sigma11", y = "densidade")+
+ggplot(post_chains_1,aes(x = Sigma))+
+  geom_histogram(fill = 4, color = 4, bins = 100)+
+  geom_vline(aes(xintercept = mean(Sigma), color = "Média"),show.legend = TRUE)+
+  labs(title = "Distribuição a posteriori de Sigma",x = "Sigma", y = "densidade")+
   scale_colour_discrete(name = "Legenda")
 
 
@@ -73,11 +82,41 @@ for (i in 1:15){
   cred_intervals[i,2] <- low
   cred_intervals[i,3] <- high
 }
+#ainda não é o intervalo de alta densidade
 # Temos como não significativo algumas dummies de espécie, porém optamos por manter a categórica
 
+#plot dos intervalos
+
+ggplot(cred_intervals, aes(x = "Parâmetro"))+
+  geom_segment(aes(x=`Parâmetro`,y = `2.5%`, yend = `97.5%`), color = ifelse(cred_intervals$`2.5%`*cred_intervals$`97.5%`<0,2,4))+
+  geom_hline(yintercept = 0, color = 2)+
+  coord_flip()
+
 #cálculo da distribuição de r^2 a posteriori
-# ...
-# ...
+
+X <- as.matrix(mutate(db, intercepto = 1) %>% select(intercepto, 2:14))
+Y <- as.matrix(db[,1])
+Y_mean <- mean(Y)
+
+R2_post_distrib <- c()
+for (i in 1:10000){
+  B <- matrix(as.numeric(post_chains_1[i,1:14]), nrow = 14)
+  fitted_values <- X %*% B
+  SQE <- sum((Y - fitted_values)^2)
+  SQReg <- sum((fitted_values - Y_mean)^2)
+  SQT <- SQE + SQReg
+  R2 <- SQReg/SQT
+  
+  R2_post_distrib <- c(R2_post_distrib, R2)
+}
+
+ggplot(as.data.frame(R2_post_distrib),aes(x = R2_post_distrib))+
+  geom_histogram(aes(y=..density..), bins =50, fill = 4)+
+  geom_density(color = 2, fill = 2, alpha = 0.6)+
+  geom_vline(aes(xintercept = mean(R2_post_distrib), color = "Média"), show.legend = TRUE)+
+  scale_x_continuous(breaks = seq(0.994, 0.996, 0.001),expand = c(0, 0), limits = c(0.994,0.996)) +
+  labs(title = "Distribuição a posteriori de R^2",x = "R^2", y = "densidade")+
+  scale_colour_discrete(name = "Legenda")
 
 # análise de resíduos pelos betas médios
 
@@ -86,10 +125,11 @@ for (i in 1:14){
   post_means_B[i] <- mean(post_chains_1[,i])
 }
 
-X <- mutate(db, intercepto = 1) %>% select(intercepto, 2:14)
-fitted_values <- as.matrix(X) %*% matrix(post_means_B, nrow = 14)
 
-residuals <- as.matrix(db[,1]) - fitted_values
+fitted_values <- X %*% matrix(post_means_B, nrow = 14)
+
+
+residuals <- Y - fitted_values
 colnames(residuals) <- "residuo"
 
 data.frame(fitted =fitted_values, residuals) %>% ggplot(aes(x = fitted, y = residuo))+
@@ -102,9 +142,7 @@ ggplot(residuals,aes(x = residuals[,1]))+
 ggplot(residuals,aes(sample = residuals[,1]))+
   geom_qq()+
   geom_qq_line()
-#os gráficos aparentam normalidade, e detectamos a presença de alguns outliers
-
-
+#os gráficos aparentam normalidade, e detectamos a presença de alguns possíveis outliers
 
 # distribuição preditiva de alguns betas (pode ser uma validação cruzada se quisermos)
 # ...
