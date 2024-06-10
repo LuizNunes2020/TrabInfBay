@@ -1,59 +1,129 @@
-library(ggplot2)
+---
+title: "Tabela"
+author: "Danilo"
+date: "2024-05-22"
+output: pdf_document
+---
+
+```{r}
+library(car)
 library(tidyverse)
-library(lrgs)
-library(GGally) #ggPairs
-library(car) #VIF
-library(bestglm)#Best Model
+library(GGally)
+```
 
 
-db <- read_csv(choose.files())
-db <- db %>% mutate(Species = as.factor(Species))
+```{r setup, include=FALSE}
+temp <- read.csv(choose.files())
 
-#Verificando váriaveis
-boxplot(db$Weight)
+```
 
-#retirando observacao 0
-db <- db %>% filter(Weight != 0)
+Começamos escolhendo um mês como referência, para evitar dependência temporal.
 
-boxplot(db$Length1)
-boxplot(db$Length2)
-boxplot(db$Length3)
-boxplot(db$Height)
-boxplot(db$Width)
+```{r vereificação dos dados}
+dados <- temp %>% dplyr::filter(month_of_reference == "November")
+```
 
-#verificando correlação entre preditoras
-ggpairs(db)
+realizamos a análise descritiva dos dados, buscando por anormalidades.
 
-#retirando variáveis muito correlacionadas
-db <- db %>% select(-Length2,-Length3)
+```{r}
+boxplot(dados$engine_size)
+boxplot(dados$year_model)
+hist(dados$avg_price_brl) 
+```
 
-ggpairs(db)
+Não encontrado outliers ou comportamentos inesperados, analisamos a correlação dois a dois:
+```{r}
+#aqui foram analisados os dados por outliers foram validados os dados para análise
+ggpairs(dados[c(9,11,12)])
+#apos não perceber nenhuma correlação perceptivel direta entre as variáveis assumimos independencia 
 
-#modelo frequentista
-model <- lm(log(Weight) ~ Length1 + Height + Width + Species,db)
-summary(model)
+```
 
-#verificando multicolinearidade
-car::vif(model) #percebemos que length, Height e Width são provavelmente multicolineares, adicionamos interação para controlar.
+Removemos variáveis irrelevantes para o modelo, e reclassificamos as marcas de carro considerando os principais modelos (com mais observações) e outros.
+```{r tratamento de dados}
+dados <- dados[-c(3,4,6,10)]
 
-#modelo quase saturado
-model <- lm(log(Weight) ~ Length1 + Height+ Width + Species + Length1*Species + Height*Species + Width*Species + Length1*Height*Width,db)
-summary(model)
+`%nin%` = Negate(`%in%`)
+dados$brand <- ifelse(dados$brand %nin% c("VW - VolksWagen","Fiat","GM - Chevrolet","BMW","Mercedes-Benz","Renault","Peugeot","Ford","Citroën","Audi","Hyundai","Mitsubishi"),"Alternativos",dados$brand)
+```
+
+Começando a definir os objetivos do modelo, filtramos as observações para uma faixa de preço usual no consumo médio brasileiro (até R$100 000)
+```{r tratamento de dados}
+dados <- dados %>% filter(avg_price_brl < 100000)
+#analisando carros de preço acessivel
+```
+
+
+Inicialmente, consideramos
+
+```{r}
+summary(lm(avg_price_brl/1000 ~  age_years +as.factor(brand)+ as.factor(gear) + engine_size + as.factor(fuel),dados))
+
+model <- lm(avg_price_brl ~  age_years +as.factor(brand)+ as.factor(gear) + engine_size + as.factor(fuel),dados)
+
 plot(model)
 
-#extrair um ótimo modelo
-forward <- regsubsets(log(Weight) ~ Length1 + Height+ Width + Species + Length1*Species + Height*Species + Width*Species + Length1*Height*Width, db, nvmax = 150, method = "forward")
-modelos <- summary(forward)
-modelos$which
-which.max(modelos$adjr2)
-
-#usando modelo encontrado por stepwise
-model <- lm(log(Weight) ~ Length1 + Height+ Width + Species + Length1*Height*Width,db) #optando pelo mais simples
+model <- lm(log(avg_price_brl) ~  age_years +as.factor(brand)+ as.factor(gear) + engine_size + as.factor(fuel),dados)
 summary(model)
+
+
+qqnorm(model$residuals)
+qqline(model$residuals)
+hist(model$residuals)
 plot(model)
 
-#Agora o desafio é fazer parecido de forma bayesiana rapazeada, bora 
+car::vif(model)
+
+avPlots(model)
+```
+
+```{r}
+leaps <- regsubsets(log(avg_price_brl) ~  age_years +as.factor(brand)+ as.factor(gear) + engine_size + as.factor(fuel), nbest= 1,data = dados,nvmax = 18)
+
+plot(leaps,scale = "bic")
+
+plot(summary(leaps)$bic,type = "l")
+plot(summary(leaps)$rsq,type = "l")
+plot(summary(leaps)$cp,type = "l")
+plot(summary(leaps)$adjr2,type = "l")
+plot(summary(leaps)$rss, type = "l")
+```
 
 
+```{r}
+library(leaps)
 
+model <- lm(log(avg_price_brl) ~  age_years +as.factor(brand)+ as.factor(gear) + engine_size + as.factor(fuel)+
+              age_years*as.factor(brand)+ age_years*as.factor(gear) + age_years*engine_size + age_years*as.factor(fuel)+
+              as.factor(brand)*as.factor(gear) + as.factor(brand)*engine_size + as.factor(brand)*as.factor(fuel)+
+              as.factor(gear)*engine_size + as.factor(gear)*as.factor(fuel)+
+              engine_size*as.factor(fuel)
+            ,dados)
+summary(model)
+
+
+qqnorm(model$residuals)
+qqline(model$residuals)
+hist(model$residuals)
+plot(model)
+
+leaps <- regsubsets(log(avg_price_brl) ~  age_years +as.factor(brand)+ as.factor(gear) + engine_size + as.factor(fuel)+
++                age_years*as.factor(brand)+ age_years*as.factor(gear) + age_years*engine_size + age_years*as.factor(fuel)+
++                as.factor(brand)*as.factor(gear) + as.factor(brand)*engine_size + as.factor(brand)*as.factor(fuel)+
++                as.factor(gear)*engine_size + as.factor(gear)*as.factor(fuel)+
++                engine_size*as.factor(fuel), nbest = 1,nvmax = 174,data = dados,really.big = T, method = "forward")
+
+plot(leaps,scale = "cp")
+
+as.matrix(summary(leaps)) -> a
+a_matrix <- as.data.frame(a[1])
+
+plot(summary(leaps)$bic,type = "l")
+plot(summary(leaps)$rsq,type = "l")
+plot(summary(leaps)$cp,type = "l")
+plot(summary(leaps)$adjr2,type = "l")
+plot(summary(leaps)$rss, type = "l")
+
+## 11483-11845 é uma caminhonete nissan 6.5 15000 reais
+```
 
