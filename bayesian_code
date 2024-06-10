@@ -38,18 +38,53 @@ db <- db %>% mutate("Length1:Height" = Length1*Height, "Length1:Width" = Length1
 
 db <- db %>% mutate(Weight = log(Weight))
 
-bayesian_model <- Gibbs.regression(as.matrix(db[,2:14]), db$Weight, NULL, 10000, trace='bsmt', fix='xy') ##GIBBS
+#Amostrando dois modelos com valores iniciais diferentes
+start_1 <- list(B = matrix(rep(0,14), nrow = 14), Sigma = matrix(1))
+start_2 <- list(B = matrix(rep(100,14), nrow = 14), Sigma = matrix(10))
 
-post_chains_1 <- Gibbs.post2dataframe(bayesian_model)[,1:15]
+bayesian_model_a <- Gibbs.regression(as.matrix(db[,2:14]), db$Weight, NULL, 10100, trace='bs', fix='xy', start = start_1) ##GIBBS
+bayesian_model_b <- Gibbs.regression(as.matrix(db[,2:14]), db$Weight, NULL, 10100, trace='bs', fix='xy', start = start_2)
+
+post_chains_1 <- Gibbs.post2dataframe(bayesian_model_a)[,1:15]
+post_chains_2 <- Gibbs.post2dataframe(bayesian_model_b)[,1:15]
 
 colnames(post_chains_1) <- c(paste("B0",1:9, sep = ""),paste("B",10:14, sep=""),"Sigma")
-#Verificação gráfica da convergência e calculo das estisticas R
-#...
-#...
 
-#Burn-in
-#...
-#...
+
+#Verificação gráfica da convergência e calculo das estisticas R
+
+  #plots
+for(i in 1:15){
+  plot(1:10100,post_chains_1[,i],type = "l", col = 2)
+  lines(1:10100,post_chains_2[,i],type = "l", col = 4)
+}
+
+  # burn-in
+
+post_chains_1 <- post_chains_1[101:10100,]
+post_chains_2 <- post_chains_2[101:10100,]
+
+  #R
+
+r_statistics <- data.frame(colnames(post_chains_1), rep(0,15))
+colnames(r_statistics) <- c("Parametro","R")
+
+for (i in 1:15){
+  theta_a_i. <- mean(post_chains_1[,i])
+  theta_b_i. <- mean(post_chains_2[,i])
+  theta_i. <- c(theta_a_i.,theta_b_i.)
+  
+  theta_i.. <- mean(theta_i.)
+  
+  B_i <- nrow(post_chains_1)/(length(theta_i.)-1)*sum((theta_i.- theta_i..)^2)
+  W_i <- 1/length(theta_i.) * sum(var(c(post_chains_1[,i],post_chains_1[,i])))
+  V_i <- (nrow(post_chains_1)-1)/nrow(post_chains_1)*W_i + 1/nrow(post_chains_1)*B_i
+  R_i <- sqrt(V_i/W_i)
+  
+  r_statistics[i,2] <- R_i
+}
+
+r_statistics
 
 #distribuicões dos B e Sigma a posteriori
 
@@ -65,7 +100,7 @@ for (i in 1:14){
 }
 
 ggplot(post_chains_1,aes(x = Sigma))+
-  geom_histogram(fill = 4, color = 4, bins = 100)+
+  geom_density(fill = 4, color = 4)+
   geom_vline(aes(xintercept = mean(Sigma), color = "Média"),show.legend = TRUE)+
   labs(title = "Distribuição a posteriori de Sigma",x = "Sigma", y = "densidade")+
   scale_colour_discrete(name = "Legenda")
@@ -114,7 +149,6 @@ ggplot(as.data.frame(R2_post_distrib),aes(x = R2_post_distrib))+
   geom_histogram(aes(y=..density..), bins =50, fill = 4)+
   geom_density(color = 2, fill = 2, alpha = 0.6)+
   geom_vline(aes(xintercept = mean(R2_post_distrib), color = "Média"), show.legend = TRUE)+
-  scale_x_continuous(breaks = seq(0.994, 0.996, 0.001),expand = c(0, 0), limits = c(0.994,0.996)) +
   labs(title = "Distribuição a posteriori de R^2",x = "R^2", y = "densidade")+
   scale_colour_discrete(name = "Legenda")
 
@@ -147,3 +181,4 @@ ggplot(residuals,aes(sample = residuals[,1]))+
 # distribuição preditiva de alguns betas (pode ser uma validação cruzada se quisermos)
 # ...
 # ..
+
