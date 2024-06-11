@@ -3,6 +3,7 @@ library(lrgs)
 library(fastDummies)
 library(ggplot2)
 library(GGally)
+library(HDInterval)
 
 db <- read_csv(choose.files())
 db <- db %>% mutate(Species = as.factor(Species))
@@ -112,12 +113,10 @@ cred_intervals <- data.frame(colnames(post_chains_1), rep(0,15), rep(0,15))
 colnames(cred_intervals) <- c("Parâmetro","2.5%","97.5%")
 
 for (i in 1:15){
-  low <- as.numeric(quantile(post_chains_1[,i],0.025))
-  high <- as.numeric(quantile(post_chains_1[,i],0.975))
-  cred_intervals[i,2] <- low
-  cred_intervals[i,3] <- high
+  HPD_region <- HDInterval::hdi(post_chains_1[,i])
+  cred_intervals[i,2] <- HPD_region[1]
+  cred_intervals[i,3] <- HPD_region[2]
 }
-#ainda não é o intervalo de alta densidade
 # Temos como não significativo algumas dummies de espécie, porém optamos por manter a categórica
 
 #plot dos intervalos
@@ -181,4 +180,3 @@ ggplot(residuals,aes(sample = residuals[,1]))+
 # distribuição preditiva de alguns betas (pode ser uma validação cruzada se quisermos)
 # ...
 # ..
-
