@@ -41,7 +41,7 @@ B13: Length 1:Height:Width
 
 A evolução de ambas as cadeias de Markov para cada um dos parâmetros do modelo é dada pelas Figuras 4 a 18. Analisando-as, fica claro que as cadeias convergiram para a distribuição estacionária.
 
-Após realizarmos um burn-in de 1000 observações, calculamos a estatística R, que é dada pela Tabela 1 para cada um dos parâmetros. Nota-se que todos os valores estão muito próximos de 1, indicando ambas as cadeias de Markov convergiram para os mesmos valores.
+Após realizarmos um burn-in de 100 observações, calculamos a estatística R, que é dada pela Tabela 1 para cada um dos parâmetros. Nota-se que todos os valores estão muito próximos de 1, indicando ambas as cadeias de Markov convergiram para os mesmos valores.
 
 As Figuras 19 a 33 representam a distribuição a posteriori dos parâmetros. Podemos verificar na prática aquilo que já se esperava: todas as distribuições conjugam.
 
