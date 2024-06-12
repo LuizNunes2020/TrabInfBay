@@ -1,0 +1,57 @@
+—--- Introdução
+
+Em ictiologia (estudo dos peixes), é comum que se queira medir e registrar as características físicas de um animal em questão. Entretanto, em certas situações, não é possível ou prático capturá-lo para que seja analisado; por exemplo, caso ele já esteja extinto — sobrando apenas seus fósseis — ou, devido a sua raridade de ser encontrado, câmeras fotográficas tenham que ser usadas. Em ambos os casos, os pesquisadores são capazes de medir suas características relacionadas ao comprimento, mas não à massa. Nesse sentido, nosso trabalho tem como objetivo fornecer a esses pesquisadores um método no qual é possível que se infira o peso de um peixe dado que saibam suas medidas, sua espécie e tenham mais observações sobre indivíduos dessa espécie ou espécies parecidas.
+
+
+—-- Métodos e materiais
+
+Para atingir esse objetivo, foram amostrados 159 peixes comumente encontrados em mercados, e juntamente com a sua espécie, foram anotadas as medidas de 5 partes de seus corpos: o peso (Weight), a altura (Height), o comprimento da boca ao começo do rabo (Length 1), o comprimento da diagonal da boca até o começo do rabo (Length 2), o comprimento da boca até o final do rabo (Length 3) e a espessura (Width); o peso está em gramas e a outras medidas, em centímetros. As espécies contidas na amostra são: Bream, Roach, Whitefish, Parkki, Perch, Pike e Smelt.
+
+Com os dados em mãos, primeiro, analisamos o nível de correlação entre as variáveis preditoras e decidimos quais seriam descartadas por agregar pouca informação. Também, com intuito de melhorar o ajuste do modelo, fizemos uma transformação logarítmica na variável Weight, e adicionamos 4 interações.
+
+Em seguida, criamos um modelo de regressão linear múltipla, onde seus parâmetros foram estimados por uma técnica bayesiana denominada amostrador de Gibbs. Assumimos distribuição Normal para todos os parâmetros do modelo, com exceção da variância, que assumimos ser Gama.
+
+No mais, criamos os gráficos e tabelas necessárias para se verificar as suposições utilizadas para realizar todos esses procedimentos: convergência da cadeia de Markov à distribuição estacionária; comparação da variância intra-cadeia com a entre-cadeia por meio da estatística R-chapéu; e distribuição dos resíduos pela variável resposta.
+
+Por fim, analisamos os resultados obtidos por meio dos gráficos e intervalos de credibilidade da distribuição à posteriori dos parâmetros.
+
+
+--- Resultados
+
+Uma primeira análise descritiva dos dados é dada pelas Figura 1 e 2. Nelas, é possível observar que as variáveis Height, Length 1, Length 2 e Length 3 estão na mesma ordem de grandeza, enquanto que Weight e Width, em ordens de grandeza únicas. Nota-se, também, que existe uma observação na qual o peixe tem peso 0g; essa observação foi retirada dos dados.
+
+A Figura 3 nos mostra a correlação entre cada par de variáveis dos dados. Por conta da altíssima correlação entre Length 1 com Length 2 (1) e Length 1 com Length 3 (0.99), decidimos retirá-las da análise.
+
+[Colocar uma foto de um peixe com cada uma das medidas (que vamos utilizar) indicadas nele, para ficar mais ilustrativo].
+
+Os parâmetros Betas representam as seguintes variáveis:
+B1: Length 1
+B2: Height
+B3: Width
+B4: Espécie Parkki
+B5: Espécie Perch
+B6: Espécie Pike
+B7: Espécie Roach
+B8: Espécie Smelt
+B9: Espécie Whitefish
+B10: Length 1:Height
+B11: Length 1:Width
+B12: Height:Width
+B13: Length 1:Height:Width
+
+A evolução de ambas as cadeias de Markov para cada um dos parâmetros do modelo é dada pelas Figuras 4 a 18. Analisando-as, fica claro que as cadeias convergiram para a distribuição estacionária.
+
+Após realizarmos um burn-in de 1000 observações, calculamos a estatística R, que é dada pela Tabela 1 para cada um dos parâmetros. Nota-se que todos os valores estão muito próximos de 1, indicando ambas as cadeias de Markov convergiram para os mesmos valores.
+
+As Figuras 19 a 33 representam a distribuição a posteriori dos parâmetros. Podemos verificar na prática aquilo que já se esperava: todas as distribuições conjugam.
+
+ A Figura 34 e a Tabela 2 trazem os intervalos de credibilidade para cada um dos parâmetros. É possível observar que, com a exceção de algumas espécies de peixe, todas as variáveis são significativas. Devemos notar que peixes dessas espécies em questão —  Parkki, Pike, Roach e Smelt —  podem ser usados como observações para se ajustar um modelo preditivo para indivíduo da espécie Beam (que foi usada como referência).
+
+
+A distribuição a posteriori da estatística R^2 é representada pela Figura 35. Por ela, podemos constatar que o modelo linear criado representa muito bem os dados.
+
+Por fim, as Figuras 36, 37 e 38 nos permitem fazer uma análise gráfica do ajuste do modelo [TERMINAR ESSA PARTE DA ANÁLISE]
+
+
+—--- Conclusão
+Dado os resultados obtidos, podemos afirmar que o método proposto pode ser útil para pesquisadores da área de ictiologia, pois, não apenas o modelo obteve um ajuste excelente em relação aos dados — propiciando uma boa previsão da massa de um peixe observado —  como, caso esses pesquisadores tenham certeza da  semelhança físicas entre duas espécies de peixes, uma rara e outra comum por exemplo, um novo modelo pode ser ajustado, utilizando os dados dos indivíduos da espécie comum.
