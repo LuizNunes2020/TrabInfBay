@@ -18,7 +18,7 @@ Por fim, analisamos os resultados obtidos por meio dos gráficos e intervalos de
 
 --- Resultados
 
-Uma primeira análise descritiva dos dados é dada pelas Figura 1 e 2. Nelas, é possível observar que as variáveis Height, Length 1, Length 2 e Length 3 estão na mesma ordem de grandeza, enquanto que Weight e Width, em ordens de grandeza únicas. Nota-se, também, que existe uma observação na qual o peixe tem peso 0g; essa observação foi retirada dos dados.
+Uma primeira análise descritiva dos dados é dada pelas Figura 1 e 2. Nelas, é possível observar que as variáveis Height, Length 1, Length 2 e Length 3 estão na mesma ordem de grandeza, enquanto que Weight e Width, em uma ordem de grandeza menor. Nota-se, também, que existe uma observação na qual o peixe tem peso 0g; essa observação foi retirada dos dados.
 
 A Figura 3 nos mostra a correlação entre cada par de variáveis dos dados. Por conta da altíssima correlação entre Length 1 com Length 2 (1) e Length 1 com Length 3 (0.99), decidimos retirá-las da análise.
 
