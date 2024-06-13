@@ -5,6 +5,8 @@ library(ggplot2)
 library(GGally)
 library(HDInterval)
 
+set.seed(123456)
+
 #--- Lendo e preparando os dados ---#
 
 db <- read_csv(choose.files())
@@ -41,6 +43,8 @@ db <- dummy_cols(db, remove_first_dummy = TRUE,remove_selected_columns = TRUE) #
 db <- db %>% mutate("Length1:Height" = Length1*Height, "Length1:Width" = Length1*Width, "Height:Width" = Height*Width, "Length1:Height:Width" = Length1*Height*Width) # dada as claras correlações entre entre as preditoras, adicionamos interação para controlar.
 
 #--- Separando amostra para validação cruzada ---#
+
+rnorm(1,0,1)
 
 lines <- sample(1:length(db$Weight),30) #aproximadamente 20% dos dados
 teste <- db[lines,]
@@ -93,8 +97,8 @@ ggplot(NULL, aes(x = 1:n))+
 # burn-in
 
 pulo <- 1000
-post_chains_1 <- post_chains_1[pulo+1:n,]
-post_chains_2 <- post_chains_2[pulo+1:n,]
+post_chains_1 <- post_chains_1[(pulo+1):n,]
+post_chains_2 <- post_chains_2[(pulo+1):n,]
 
 n<- n-pulo
 
@@ -112,7 +116,7 @@ for (i in 1:(p+2)){
   theta_i.. <- mean(theta_i.)
   
   B_i <- nrow(post_chains_1)/(length(theta_i.)-1)*sum((theta_i.- theta_i..)^2)
-  W_i <- 1/length(theta_i.) * sum(var(c(post_chains_1[,i],post_chains_1[,i])))
+  W_i <- 1/length(theta_i.) * sum(var(c(post_chains_1[,i],post_chains_2[,i])))
   V_i <- (nrow(post_chains_1)-1)/nrow(post_chains_1)*W_i + 1/nrow(post_chains_1)*B_i
   R_i <- sqrt(V_i/W_i)
   
@@ -163,8 +167,8 @@ cred_intervals # Tabela 2
 #plot dos intervalos
 
 ggplot(cred_intervals, aes(x = "Parâmetro"))+
-  geom_segment(aes(x=`Parâmetro`,y = `2.5%`, yend = `97.5%`), color = ifelse(cred_intervals$`2.5%`*cred_intervals$`97.5%`<0,2,4))+
-  geom_hline(yintercept = 0, color = 2, linetype = "longdash")+
+  geom_segment(aes(x=`Parâmetro`,xend = `Parâmetro`,y = `2.5%`, yend = `97.5%`), color = ifelse(cred_intervals$`2.5%`*cred_intervals$`97.5%`<0,2,4))+
+  geom_hline(yintercept = 0, color = 2)+
   labs(x = "Parâmetro", y = "Intervalo de credibilidade")+
   coord_flip()+
   theme_minimal()# Figura 34
@@ -205,7 +209,6 @@ for (i in 1:(p+1)){
 
 fitted_values <- X %*% matrix(post_means_B, nrow = p+1)
 
-
 residuals <- Y - fitted_values
 colnames(residuals) <- "residuo"
 
@@ -214,11 +217,11 @@ data.frame(fitted =fitted_values, residuals) %>% ggplot(aes(x = fitted, y = resi
   geom_smooth(method = "lm")+
   theme_minimal() # Figura 36
 
-ggplot(residuals,aes(x = residuals[,1]))+
+ggplot(as.data.frame(residuals),aes(x = residuals[,1]))+
   geom_histogram()+
   theme_minimal() # Figura 37
 
-ggplot(residuals,aes(sample = residuals[,1]))+
+ggplot(as.data.frame(residuals),aes(sample = residuals[,1]))+
   geom_qq()+
   geom_qq_line()+
   theme_minimal() # Figura 38
@@ -260,7 +263,7 @@ taxa_acerto <- mean(ifelse(prediction$Weight>prediction$Low & prediction$Weight<
 taxa_acerto
 
 ggplot(prediction,aes(x = predictors_vector_i))+
-  geom_segment(aes(y = Low, yend = High),color = ifelse(prediction$Weight>prediction$Low & prediction$Weight<prediction$High,4,2))+
+  geom_segment(aes(xend = predictors_vector_i,y = Low, yend = High),color = ifelse(prediction$Weight>prediction$Low & prediction$Weight<prediction$High,4,2))+
   geom_point(mapping = aes(y = Weight),color = ifelse(prediction$Weight>prediction$Low & prediction$Weight<prediction$High,4,2))+
   labs(x = "Vetores de preditoras", y = "Intervalos preditos e pontos verdadeiros em ln(Weight)")+
   coord_flip()+
