@@ -2,9 +2,9 @@
 title: "Regressão por amostrador Gibbs"
 output: html_document
 author: 
-- Felipe Camilo de Queiroz 222006
-- Enzo Putton
-- Luiz Felipe
+  - Felipe Camilo de Queiroz 222006
+  - Enzo Putton Tortelli 204256
+  - Luiz Felipe de Oliveira Barbosa Nunes 255403
 date: "2024-06-13"
 ---
 
@@ -23,7 +23,7 @@ Lendo e preparando os dados
 ```{r}
 #--- Lendo e preparando os dados ---#
 
-db <- read_csv("dados.csv")
+db <- read_csv("fish.csv")
 
 db <- db %>% mutate(Species = as.factor(Species))
 
