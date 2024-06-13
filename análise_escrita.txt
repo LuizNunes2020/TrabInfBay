@@ -9,7 +9,7 @@ Para atingir esse objetivo, foram amostrados 159 peixes comumente encontrados em
 
 Com os dados em mãos, primeiro, analisamos o nível de correlação entre as variáveis preditoras e decidimos quais seriam descartadas por agregar pouca informação. Também, com intuito de melhorar o ajuste do modelo, fizemos uma transformação logarítmica na variável Weight, e adicionamos 4 interações.
 
-Em seguida, criamos um modelo de regressão linear múltipla, onde seus parâmetros foram estimados por uma técnica bayesiana denominada amostrador de Gibbs. Assumimos distribuição Normal para todos os parâmetros do modelo, com exceção da variância, que assumimos ser Gama.
+Em seguida, criamos um modelo de regressão linear múltipla, onde seus parâmetros foram estimados por uma técnica bayesiana denominada amostrador de Gibbs. Assumimos distribuição Normal centrada em 0 para todos os parâmetros do modelo, com exceção da variância, que assumimos ser Gama Inversa.
 
 No mais, criamos os gráficos e tabelas necessárias para se verificar as suposições utilizadas para realizar todos esses procedimentos: convergência da cadeia de Markov à distribuição estacionária; comparação da variância intra-cadeia com a entre-cadeia por meio da estatística R-chapéu; e distribuição dos resíduos pela variável resposta.
 
