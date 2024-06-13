@@ -1,0 +1,295 @@
+---
+title: "Regressão por amostrador Gibbs"
+output: html_document
+author: 
+- Felipe Camilo de Queiroz 222006
+- Enzo Putton
+- Luiz Felipe
+date: "2024-06-13"
+---
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(lrgs)
+library(fastDummies)
+library(ggplot2)
+library(GGally)
+library(HDInterval)
+
+set.seed(123456)
+```
+
+Lendo e preparando os dados
+```{r}
+#--- Lendo e preparando os dados ---#
+
+db <- read_csv("dados.csv")
+
+db <- db %>% mutate(Species = as.factor(Species))
+
+db <- db %>% filter(Weight != 0) #retirando observacao 0
+
+db <- db %>% mutate(Weight = log(Weight)) #tranformando Y para ln(Y)
+
+```
+
+```{r}
+#--- Análise descritiva ---#
+
+aux_db <- pivot_longer(db,3:7,names_to = "medida")
+
+ggplot(aux_db,aes(y = value, color = medida))+ # Figura 1
+  geom_boxplot()+
+  theme_minimal()
+
+ggplot(db, aes(y = Weight))+ # Figura 2
+  geom_boxplot(color = 4)+
+  coord_cartesian(xlim = c(-1.5,1.5))+
+  theme_minimal()
+
+ggpairs(db[,1:6])
+# Figura 3: verificando correlação entre preditoras
+```
+
+Preparando os dados:
+
+```{r}
+db <- db %>% select(-Length2,-Length3) #decidimos manter apenas um length
+
+db <- dummy_cols(db, remove_first_dummy = TRUE,remove_selected_columns = TRUE) #Criando Dummies
+
+db <- db %>% mutate("Length1:Height" = Length1*Height, "Length1:Width" = Length1*Width, "Height:Width" = Height*Width, "Length1:Height:Width" = Length1*Height*Width) # dada as claras correlações entre entre as preditoras, adicionamos interação para controlar.
+
+```
+Separando amostra para validação cruzada
+```{r}
+#--- Separando amostra para validação cruzada ---#
+
+rnorm(1,0,1)
+
+lines <- sample(1:length(db$Weight),30) #aproximadamente 20% dos dados
+teste <- db[lines,]
+db <- db[-lines,]
+```
+
+Gerando cadeias
+```{r}
+n <- 11000 # número de iterações das cadeias
+p <- 13 # número de covariaveis
+
+start_1 <- list(B = matrix(rep(0,p+1), nrow = p+1), Sigma = matrix(1)) #Amostrando dois modelos com valores iniciais diferentes
+start_2 <- list(B = matrix(rep(100,p+1), nrow = p+1), Sigma = matrix(10))
+
+bayesian_model_a <- Gibbs.regression(as.matrix(db[,2:(p+1)]), db$Weight, NULL, n, trace='bs', fix='xy', start = start_1) ##GIBBS
+bayesian_model_b <- Gibbs.regression(as.matrix(db[,2:(p+1)]), db$Weight, NULL, n, trace='bs', fix='xy', start = start_2)
+
+post_chains_1 <- Gibbs.post2dataframe(bayesian_model_a)
+post_chains_2 <- Gibbs.post2dataframe(bayesian_model_b)
+
+colnames(post_chains_1) <- c("B0",paste("B0",1:9, sep = ""),paste("B",10:p, sep = ""),"Sigma")
+
+```
+Analisando convergência
+```{r}
+# plot dos betas
+
+for(i in 1:(p+1)){
+  media_i <- mean(post_chains_1[100:n,i])
+  dp_i <- sd(post_chains_1[100:n,i])
+  
+  g <- ggplot(NULL, aes(x = 1:n))+
+    geom_step(data = post_chains_1, mapping = aes(y = post_chains_1[,i]), color = 2)+
+    geom_step(data = post_chains_2, mapping = aes(y = post_chains_2[,i]), color = 4)+
+    coord_cartesian(ylim = c(media_i - 8*dp_i, media_i+8*dp_i))+
+    labs(title = paste("Iterações de B",i-1," em duas cadeias diferentes", sep = ""), x = "Iterações", y = paste("B",i-1,sep = ""))+
+    theme_minimal()
+  
+  print(g)
+} # Figuras 4 - 17
+
+
+#plot do Sigma
+ggplot(NULL, aes(x = 1:n))+
+  geom_step(data = post_chains_1, mapping = aes(y = post_chains_1[,p+2]), color = 2)+
+  geom_step(data = post_chains_2, mapping = aes(y = post_chains_2[,p+2]), color = 4)+
+  coord_cartesian(ylim = c(0,0.05))+
+  labs(title = "Iterações de Sigma em duas cadeias diferentes", x = "Iterações", y = "Sigma")+
+  theme_minimal() # Figura 18
+
+
+# burn-in
+
+pulo <- 1000
+post_chains_1 <- post_chains_1[(pulo+1):n,]
+post_chains_2 <- post_chains_2[(pulo+1):n,]
+
+n<- n-pulo
+
+
+# estatística R
+
+r_statistics <- data.frame(colnames(post_chains_1), rep(0,p+2))
+colnames(r_statistics) <- c("Parametro","R")
+
+for (i in 1:(p+2)){
+  theta_a_i. <- mean(post_chains_1[,i])
+  theta_b_i. <- mean(post_chains_2[,i])
+  theta_i. <- c(theta_a_i.,theta_b_i.)
+  
+  theta_i.. <- mean(theta_i.)
+  
+  B_i <- nrow(post_chains_1)/(length(theta_i.)-1)*sum((theta_i.- theta_i..)^2)
+  W_i <- 1/length(theta_i.) * sum(var(c(post_chains_1[,i],post_chains_2[,i])))
+  V_i <- (nrow(post_chains_1)-1)/nrow(post_chains_1)*W_i + 1/nrow(post_chains_1)*B_i
+  R_i <- sqrt(V_i/W_i)
+  
+  r_statistics[i,2] <- R_i
+}
+
+r_statistics # Tabela 1
+```
+plot das distribuições dos parâmetros à posteriori
+```{r}
+for (i in 1:(p+1)){
+  g <- ggplot(post_chains_1)+
+    geom_density(mapping = aes(x = post_chains_1[,i]),fill = 4, color = 4)+
+    geom_vline(aes(xintercept = mean(post_chains_1[,i]), color = "Média"),linetype = "longdash", show.legend = TRUE)+
+    labs(title = paste("Distribuição a posteriori de B", i - 1, sep = ''),x = paste("B",i - 1, sep = ''), y = "densidade")+
+    scale_colour_discrete(name = "Legenda")+
+    theme_minimal()
+  
+  print(g)
+  #importar para onde precisar
+} # Figuras 19 - 32
+
+
+# plot das distribuições do Sigma à posteriori
+
+ggplot(post_chains_1,aes(x = Sigma))+ # Figuras 33
+  geom_density(fill = 4, color = 4)+
+  geom_vline(aes(xintercept = mean(Sigma), color = "Média"),linetype = "longdash",show.legend = TRUE)+
+  labs(title = "Distribuição a posteriori de Sigma",x = "Sigma", y = "densidade")+
+  scale_colour_discrete(name = "Legenda")+
+  theme_minimal() 
+```
+Intervalos de credibilidade de 95%
+```{r}
+#Intervalos de credibilidade de 95%
+cred_intervals <- data.frame(colnames(post_chains_1), rep(0,p+2), rep(0,p+2))
+colnames(cred_intervals) <- c("Parâmetro","2.5%","97.5%")
+
+for (i in 1:(p+2)){
+  HPD_region <- HDInterval::hdi(post_chains_1[,i])
+  cred_intervals[i,2] <- HPD_region[1]
+  cred_intervals[i,3] <- HPD_region[2]
+}
+
+cred_intervals # Tabela 2
+
+#plot dos intervalos
+
+ggplot(cred_intervals, aes(x = "Parâmetro"))+
+  geom_segment(aes(x=`Parâmetro`,xend = `Parâmetro`,y = `2.5%`, yend = `97.5%`), color = ifelse(cred_intervals$`2.5%`*cred_intervals$`97.5%`<0,2,4))+
+  geom_hline(yintercept = 0, color = 2)+
+  labs(x = "Parâmetro", y = "Intervalo de credibilidade")+
+  coord_flip()+
+  theme_minimal()# Figura 34
+```
+Cálculo da distribuição de r^2 a posteriori
+```{r}
+X <- as.matrix(mutate(db, intercepto = 1) %>% select(intercepto, 2:(p+1)))
+Y <- as.matrix(db[,1])
+Y_mean <- mean(Y)
+
+
+R2_post_distrib <- c()
+for (i in 1:n){
+  B <- matrix(as.numeric(post_chains_1[i,1:(p+1)]), nrow = p+1)
+  fitted_values <- X %*% B
+  SQE <- sum((Y - fitted_values)^2)
+  SQReg <- sum((fitted_values - Y_mean)^2)
+  SQT <- SQE + SQReg
+  R2 <- SQReg/SQT
+  
+  R2_post_distrib <- c(R2_post_distrib, R2)
+}
+
+ggplot(as.data.frame(R2_post_distrib),aes(x = R2_post_distrib))+
+  geom_density(color = 4, fill = 4)+
+  geom_vline(aes(xintercept = mean(R2_post_distrib), color = "Média"), linetype  = "longdash",show.legend = TRUE)+
+  labs(title = "Distribuição a posteriori de R^2",x = "R^2", y = "densidade")+
+  scale_colour_discrete(name = "Legenda")+
+  theme_minimal() # Figura 35
+```
+Análise de resíduos pelos betas médios
+```{r}
+post_means_B <- rep(0,p+1)
+for (i in 1:(p+1)){
+  post_means_B[i] <- mean(post_chains_1[,i])
+}
+
+
+fitted_values <- X %*% matrix(post_means_B, nrow = p+1)
+
+residuals <- Y - fitted_values
+colnames(residuals) <- "residuo"
+
+data.frame(fitted =fitted_values, residuals) %>% ggplot(aes(x = fitted, y = residuo))+
+  geom_point()+
+  geom_smooth(method = "lm")+
+  theme_minimal() # Figura 36
+
+ggplot(as.data.frame(residuals),aes(x = residuals[,1]))+
+  geom_histogram()+
+  theme_minimal() # Figura 37
+
+ggplot(as.data.frame(residuals),aes(sample = residuals[,1]))+
+  geom_qq()+
+  geom_qq_line()+
+  theme_minimal() # Figura 38
+#os gráficos aparentam normalidade, e detectamos a presença de alguns possíveis outliers
+
+```
+Distribuição preditiva de alguns peixes
+```{r}
+prediction <- data.frame(Prediction_Weight = rep(0,30), Low = rep(0,30), High = rep(0,30),teste[,1],predictors_vector_i = paste("X",1:30, sep = ""))
+
+#amostrando da preditiva para cada uma das observações
+# [Y|X,B,Sigma]~N(BXi,Sigma)
+
+X_teste <- as.matrix(mutate(teste, intercepto = 1) %>% select(intercepto, 2:(p+1)))
+y_predictive_samples <- as.data.frame(matrix(data = 0,nrow = n, ncol = 30))
+
+for(i in 1:n){
+  Sigma_i <- as.numeric(post_chains_1[i,p+2])
+  B_i <- matrix(as.numeric(post_chains_1[i,1:(p+1)]),nrow = p+1)
+  fitted_values <- X_teste %*% B_i
+  
+  simulations <- mapply(rnorm, 1,as.numeric(fitted_values),rep(Sigma_i,30))#amostra da preditiva das 30 observações
+  
+  y_predictive_samples[i,]<- simulations #realiza o mesmo processo n vezes e guarda na matriz
+  
+}
+```
+intervalos de credibilidade de 95% e estimação pontual para ln(Y)
+```{r}
+for (i in 1:30){
+  pontual_prediction <- mean(y_predictive_samples[,i])
+  
+  HPD_region <- HDInterval::hdi(y_predictive_samples[,i],credMass = 0.99)
+  
+  prediction[i,1] <- pontual_prediction
+  prediction[i,2] <- HPD_region[1]
+  prediction[i,3] <- HPD_region[2]
+}
+
+taxa_acerto <- mean(ifelse(prediction$Weight>prediction$Low & prediction$Weight<prediction$High,1,0))
+taxa_acerto
+
+ggplot(prediction,aes(x = predictors_vector_i))+
+  geom_segment(aes(xend = predictors_vector_i,y = Low, yend = High),color = ifelse(prediction$Weight>prediction$Low & prediction$Weight<prediction$High,4,2))+
+  geom_point(mapping = aes(y = Weight),color = ifelse(prediction$Weight>prediction$Low & prediction$Weight<prediction$High,4,2))+
+  labs(x = "Vetores de preditoras", y = "Intervalos preditos e pontos verdadeiros em ln(Weight)")+
+  coord_flip()+
+  theme_minimal()
+```
