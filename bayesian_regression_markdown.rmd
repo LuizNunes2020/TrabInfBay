@@ -65,8 +65,6 @@ Separando amostra para validação cruzada
 ```{r}
 #--- Separando amostra para validação cruzada ---#
 
-rnorm(1,0,1)
-
 lines <- sample(1:length(db$Weight),30) #aproximadamente 20% dos dados
 teste <- db[lines,]
 db <- db[-lines,]
