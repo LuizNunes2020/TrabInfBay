@@ -15,6 +15,7 @@ No mais, criamos os gráficos e tabelas necessárias para se verificar as suposi
 
 Por fim, analisamos os resultados obtidos por meio dos gráficos e intervalos de credibilidade da distribuição à posteriori dos parâmetros.
 
+Vale dizer que, para manter o trabalho consiso, foram omitidos os gráficos da evolução da cadeia de Markov, da distribuição a posteriori e da distribuição preditiva para diversos dos parâmetros. Dito isso, esses gráficos se comportaram como era de se esperar, e de maneira muito semelhante ao gráficos que foram plotados.
 
 --- Resultados
 
@@ -47,10 +48,11 @@ As Figuras 19 a 33 representam a distribuição a posteriori dos parâmetros. Po
 
  A Figura 34 e a Tabela 2 trazem os intervalos de credibilidade para cada um dos parâmetros. É possível observar que, com a exceção de algumas espécies de peixe, todas as variáveis são significativas. Devemos notar que peixes dessas espécies em questão —  Parkki, Pike, Roach e Smelt —  podem ser usados como observações para se ajustar um modelo preditivo para indivíduo da espécie Beam (que foi usada como referência).
 
-
 A distribuição a posteriori da estatística R^2 é representada pela Figura 35. Por ela, podemos constatar que o modelo linear criado representa muito bem os dados.
 
-Por fim, as Figuras 36, 37 e 38 nos permitem fazer uma análise gráfica do ajuste do modelo [TERMINAR ESSA PARTE DA ANÁLISE]
+No mais, as Figuras 36, 37 e 38 nos permitem fazer uma análise gráfica do ajuste do modelo. Por elas, podemos verificar que não há nenhuma têndencia visível entre valores do resíduo e o ajuste do modelo, que os erros são aproximadamente normal padrão, e que a variável resposta, dada as variáveis preditoras, também seguem uma normal.
+
+Por fim, as distribuições preditiva dos parâmetros são dadas pelas Figuras [JÁ NÃO SEI QUAL].
 
 
 —--- Conclusão
